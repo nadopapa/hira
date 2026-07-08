@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="히라가나 테스트">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <title>히라가나 암기 테스트</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --success: #16a34a;
+      --success-bg: #dcfce7;
+      --error: #dc2626;
+      --error-bg: #fee2e2;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    body {
+      font-family: "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      line-height: 1.5;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .app {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header { text-align: center; padding: 12px 0 20px; }
+    header h1 { font-size: 1.35rem; font-weight: 700; }
+    header .meta { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+
+    .screen { display: none; flex: 1; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .start-desc { text-align: center; color: var(--muted); font-size: 0.95rem; line-height: 1.7; }
+
+    .stats-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%; }
+    .stat-box { background: var(--bg); border-radius: 12px; padding: 12px 16px; text-align: center; min-width: 90px; }
+    .stat-box .label { font-size: 0.75rem; color: var(--muted); }
+    .stat-box .value { font-size: 1.25rem; font-weight: 700; }
+
+    .progress { font-size: 1rem; color: var(--muted); font-weight: 600; }
+
+    .hiragana-display {
+      font-size: clamp(5rem, 22vw, 8rem);
+      line-height: 1.1;
+      margin: 8px 0;
+      user-select: none;
+    }
+
+    .status-msg { font-size: 0.9rem; color: var(--muted); text-align: center; min-height: 1.4em; }
+
+    .input-wrap { width: 100%; max-width: 360px; }
+    .input-wrap label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+    .input-wrap input {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 1.25rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      outline: none;
+      text-align: center;
+      min-height: 48px;
+    }
+    .input-wrap input:focus { border-color: var(--primary); }
+
+    .feedback {
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: 12px;
+      text-align: center;
+      display: none;
+      width: 100%;
+      max-width: 360px;
+    }
+    .feedback.show { display: block; }
+    .feedback.correct { background: var(--success-bg); color: var(--success); }
+    .feedback.wrong { background: var(--error-bg); color: var(--error); }
+
+    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; width: 100%; max-width: 360px; }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1 1 calc(50% - 10px);
+      min-width: 130px;
+      min-height: 48px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: var(--text); }
+    .btn-danger { background: var(--error-bg); color: var(--error); }
+    .btn-full { flex: 1 1 100%; }
+
+    .access-box {
+      width: 100%;
+      max-width: 360px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      text-align: left;
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+    }
+    .access-box ol { margin: 8px 0 0 18px; }
+    .access-box li { margin-bottom: 6px; }
+
+    .result-title { font-size: 1.5rem; font-weight: 700; }
+    .result-summary { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .result-summary .stat-box .value.correct { color: var(--success); }
+    .result-summary .stat-box .value.wrong { color: var(--error); }
+
+    .wrong-list { width: 100%; background: var(--bg); border-radius: 12px; padding: 14px; }
+    .wrong-list h3 { font-size: 0.9rem; color: var(--muted); margin-bottom: 8px; }
+    .wrong-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { background: var(--error-bg); color: var(--error); padding: 6px 12px; border-radius: 999px; font-size: 0.95rem; }
+    .chip .sub { font-size: 0.8rem; opacity: 0.85; margin-left: 4px; }
+
+    .result-details { width: 100%; max-height: 200px; overflow-y: auto; font-size: 0.85rem; }
+    .result-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb; }
+    .result-row:last-child { border-bottom: none; }
+
+    #btn-install { display: none; }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.2rem; }
+      .hiragana-display { font-size: clamp(4.5rem, 30vw, 7rem); }
+      button { min-width: 100%; flex: 1 1 100%; }
+      .result-summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>히라가나 암기 테스트</h1>
+      <p class="meta">한글 발음을 입력해서 답하기</p>
+    </header>
+
+    <section id="screen-start" class="screen active">
+      <div class="card">
+        <p class="start-desc">
+          10문제씩 히라가나 발음을 테스트합니다.<br>
+          글자를 보고 <strong>한글 발음</strong>을 입력하세요.<br>
+          예: あ → 아, か → 카, し → 시
+        </p>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="label">테스트 회차</div>
+            <div class="value" id="start-session-count">1</div>
+          </div>
+          <div class="stat-box">
+            <div class="label">누적 오답</div>
+            <div class="value" id="start-wrong-count">0</div>
+          </div>
+        </div>
+        <div class="access-box" id="access-box"></div>
+        <div class="btn-row">
+          <button class="btn-primary btn-full" id="btn-start-test">테스트 시작</button>
+          <button class="btn-secondary btn-full" id="btn-install">앱으로 설치</button>
+          <button class="btn-danger btn-full" id="btn-reset-data">데이터 초기화</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-test" class="screen">
+      <div class="card">
+        <div class="progress" id="question-progress">1 / 10</div>
+        <div class="hiragana-display" id="hiragana-char">あ</div>
+        <p class="status-msg" id="status-msg">한글 발음을 입력하세요</p>
+        <div class="input-wrap">
+          <label for="answer-input">한글 발음</label>
+          <input type="text" id="answer-input" placeholder="예: 아, 카, 시" autocomplete="off" enterkeyhint="done">
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="btn-row">
+          <button class="btn-success btn-full" id="btn-submit" disabled>확인 / 제출</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-result" class="screen">
+      <div class="card">
+        <div class="result-title">테스트 결과</div>
+        <div class="result-summary">
+          <div class="stat-box">
+            <div class="label">총 문제</div>
+            <div class="value" id="result-total">10</div>
+          </div>
+          <div class="stat-box">
+            <div class="label">정답</div>
+            <div class="value correct" id="result-correct">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="label">오답</div>
+            <div class="value wrong" id="result-wrong">0</div>
+          </div>
+        </div>
+        <div class="wrong-list">
+          <h3>이번 테스트 오답</h3>
+          <div class="wrong-chips" id="wrong-chips"></div>
+        </div>
+        <div class="result-details" id="result-details"></div>
+        <div class="btn-row">
+          <button class="btn-primary btn-full" id="btn-restart">다음 테스트</button>
+          <button class="btn-secondary btn-full" id="btn-back-home">처음으로</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const QUESTIONS_PER_TEST = 10;
+    const STORAGE_KEY = 'hiraganaMemoryTest';
+
+    const HIRAGANA_DATA = [
+      { char: 'あ', korean: '아' }, { char: 'い', korean: '이' }, { char: 'う', korean: '우' },
+      { char: 'え', korean: '에' }, { char: 'お', korean: '오' }, { char: 'か', korean: '카' },
+      { char: 'き', korean: '키' }, { char: 'く', korean: '쿠' }, { char: 'け', korean: '케' },
+      { char: 'こ', korean: '코' }, { char: 'さ', korean: '사' }, { char: 'し', korean: '시' },
+      { char: 'す', korean: '스' }, { char: 'せ', korean: '세' }, { char: 'そ', korean: '소' },
+      { char: 'た', korean: '타' }, { char: 'ち', korean: '치' }, { char: 'つ', korean: '츠' },
+      { char: 'て', korean: '테' }, { char: 'と', korean: '토' }, { char: 'な', korean: '나' },
+      { char: 'に', korean: '니' }, { char: 'ぬ', korean: '누' }, { char: 'ね', korean: '네' },
+      { char: 'の', korean: '노' }, { char: 'は', korean: '하' }, { char: 'ひ', korean: '히' },
+      { char: 'ふ', korean: '후' }, { char: 'へ', korean: '헤' }, { char: 'ほ', korean: '호' },
+      { char: 'ま', korean: '마' }, { char: 'み', korean: '미' }, { char: 'む', korean: '무' },
+      { char: 'め', korean: '메' }, { char: 'も', korean: '모' }, { char: 'や', korean: '야' },
+      { char: 'ゆ', korean: '유' }, { char: 'よ', korean: '요' }, { char: 'ら', korean: '라' },
+      { char: 'り', korean: '리' }, { char: 'る', korean: '루' }, { char: 'れ', korean: '레' },
+      { char: 'ろ', korean: '로' }, { char: 'わ', korean: '와' }, { char: 'を', korean: '오' },
+      { char: 'ん', korean: '응' }
+    ];
+
+    const appState = {
+      testSessionCount: 1,
+      seenUntilFive: [],
+      wrongPool: [],
+      lastResults: [],
+      questions: [],
+      currentIndex: 0,
+      results: [],
+      submitted: false
+    };
+
+    let installPrompt = null;
+
+    const ui = {
+      screenStart: document.getElementById('screen-start'),
+      screenTest: document.getElementById('screen-test'),
+      screenResult: document.getElementById('screen-result'),
+      startSessionCount: document.getElementById('start-session-count'),
+      startWrongCount: document.getElementById('start-wrong-count'),
+      accessBox: document.getElementById('access-box'),
+      questionProgress: document.getElementById('question-progress'),
+      hiraganaChar: document.getElementById('hiragana-char'),
+      statusMsg: document.getElementById('status-msg'),
+      answerInput: document.getElementById('answer-input'),
+      feedback: document.getElementById('feedback'),
+      btnStartTest: document.getElementById('btn-start-test'),
+      btnInstall: document.getElementById('btn-install'),
+      btnResetData: document.getElementById('btn-reset-data'),
+      btnSubmit: document.getElementById('btn-submit'),
+      btnRestart: document.getElementById('btn-restart'),
+      btnBackHome: document.getElementById('btn-back-home'),
+      resultTotal: document.getElementById('result-total'),
+      resultCorrect: document.getElementById('result-correct'),
+      resultWrong: document.getElementById('result-wrong'),
+      wrongChips: document.getElementById('wrong-chips'),
+      resultDetails: document.getElementById('result-details')
+    };
+
+    function normalizeKorean(text) {
+      if (!text) return '';
+      return String(text).replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
+    }
+
+    function shuffleArray(arr) {
+      const copy = arr.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function pickRandom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function findByChar(char) {
+      return HIRAGANA_DATA.find(function (item) { return item.char === char; });
+    }
+
+    function showScreen(name) {
+      ui.screenStart.classList.remove('active');
+      ui.screenTest.classList.remove('active');
+      ui.screenResult.classList.remove('active');
+      if (name === 'start') ui.screenStart.classList.add('active');
+      if (name === 'test') ui.screenTest.classList.add('active');
+      if (name === 'result') ui.screenResult.classList.add('active');
+    }
+
+    function isMobileDevice() {
+      return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    function updateAccessNote() {
+      var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+
+      if (isStandalone) {
+        ui.accessBox.innerHTML = '<strong>앱으로 실행 중</strong> — Wi-Fi·서버 없이 오프라인에서 사용 가능합니다.';
+        return;
+      }
+
+      if (isMobileDevice()) {
+        ui.accessBox.innerHTML =
+          '<strong>스마트폰 사용법</strong>' +
+          '<ol>' +
+          '<li><strong>앱으로 설치</strong> — 아래 「앱으로 설치」 버튼 (Chrome, HTTPS 접속 시)</li>' +
+          '<li><strong>홈 화면 추가</strong> — Chrome ⋮ → 「홈 화면에 추가」</li>' +
+          '<li><strong>파일로 저장</strong> — index.html을 폰에 저장 후 Chrome으로 열기</li>' +
+          '</ol>';
+      } else {
+        ui.accessBox.innerHTML =
+          '<strong>어디서든 사용</strong> — 이 HTML 파일 하나면 PC·스마트폰 모두 동작합니다. ' +
+          'GitHub Pages 등에 올리면 HTTPS URL로 스마트폰 앱처럼 설치할 수 있습니다.';
+      }
+    }
+
+    function saveProgress() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          testSessionCount: appState.testSessionCount,
+          seenUntilFive: appState.seenUntilFive,
+          wrongPool: appState.wrongPool,
+          lastResults: appState.lastResults
+        }));
+      } catch (e) {
+        console.warn('저장 실패:', e);
+      }
+    }
+
+    function loadProgress() {
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        var data = JSON.parse(raw);
+        appState.testSessionCount = data.testSessionCount || 1;
+        appState.seenUntilFive = data.seenUntilFive || [];
+        appState.wrongPool = data.wrongPool || [];
+        appState.lastResults = data.lastResults || [];
+      } catch (e) {
+        console.warn('불러오기 실패:', e);
+      }
+    }
+
+    function resetProgress() {
+      appState.testSessionCount = 1;
+      appState.seenUntilFive = [];
+      appState.wrongPool = [];
+      appState.lastResults = [];
+      saveProgress();
+      updateStartScreen();
+    }
+
+    function getQuestionSet() {
+      var session = appState.testSessionCount;
+
+      if (session <= 4) {
+        var seen = new Set(appState.seenUntilFive);
+        return shuffleArray(HIRAGANA_DATA.filter(function (item) {
+          return !seen.has(item.char);
+        })).slice(0, QUESTIONS_PER_TEST);
+      }
+
+      if (session === 5) {
+        var seen5 = new Set(appState.seenUntilFive);
+        var questions = shuffleArray(HIRAGANA_DATA.filter(function (item) {
+          return !seen5.has(item.char);
+        })).slice();
+        var need = QUESTIONS_PER_TEST - questions.length;
+        if (need > 0) {
+          var usedChars = new Set(questions.map(function (q) { return q.char; }));
+          shuffleArray(appState.wrongPool.filter(function (w) {
+            return !usedChars.has(w.char);
+          })).forEach(function (w) {
+            if (questions.length >= QUESTIONS_PER_TEST) return;
+            questions.push(w);
+            usedChars.add(w.char);
+          });
+          if (questions.length < QUESTIONS_PER_TEST) {
+            shuffleArray(HIRAGANA_DATA.filter(function (item) {
+              return seen5.has(item.char) && !usedChars.has(item.char);
+            })).forEach(function (f) {
+              if (questions.length >= QUESTIONS_PER_TEST) return;
+              questions.push(f);
+            });
+          }
+        }
+        return shuffleArray(questions);
+      }
+
+      if (appState.wrongPool.length > 0) {
+        var set = [];
+        for (var i = 0; i < QUESTIONS_PER_TEST; i++) set.push(pickRandom(appState.wrongPool));
+        return set;
+      }
+
+      var full = [];
+      for (var j = 0; j < QUESTIONS_PER_TEST; j++) full.push(pickRandom(HIRAGANA_DATA));
+      return full;
+    }
+
+    function judgeAnswer(expectedKorean, userInput) {
+      return normalizeKorean(expectedKorean) === normalizeKorean(userInput);
+    }
+
+    function markSeenAfterTest(questions) {
+      if (appState.testSessionCount <= 5) {
+        var seen = new Set(appState.seenUntilFive);
+        questions.forEach(function (q) { seen.add(q.char); });
+        appState.seenUntilFive = Array.from(seen);
+      }
+    }
+
+    function startTest() {
+      appState.questions = getQuestionSet();
+      appState.currentIndex = 0;
+      appState.results = [];
+      showScreen('test');
+      showQuestion();
+    }
+
+    function showQuestion() {
+      var q = appState.questions[appState.currentIndex];
+      if (!q) {
+        finishTest();
+        return;
+      }
+
+      appState.submitted = false;
+      ui.answerInput.value = '';
+      ui.btnSubmit.disabled = true;
+      ui.feedback.classList.remove('show', 'correct', 'wrong');
+      ui.feedback.textContent = '';
+      ui.questionProgress.textContent = (appState.currentIndex + 1) + ' / ' + QUESTIONS_PER_TEST;
+      ui.hiraganaChar.textContent = q.char;
+      ui.statusMsg.textContent = '한글 발음을 입력하세요';
+
+      setTimeout(function () {
+        ui.answerInput.focus();
+      }, 100);
+    }
+
+    function submitAnswer() {
+      if (appState.submitted) return;
+
+      var answer = ui.answerInput.value.trim();
+      if (!answer) return;
+
+      appState.submitted = true;
+      var q = appState.questions[appState.currentIndex];
+      var isCorrect = judgeAnswer(q.korean, answer);
+
+      appState.results.push({
+        number: appState.currentIndex + 1,
+        char: q.char,
+        correctAnswer: q.korean,
+        userInput: answer,
+        isCorrect: isCorrect
+      });
+
+      ui.feedback.classList.add('show');
+      if (isCorrect) {
+        ui.feedback.classList.add('correct');
+        ui.feedback.textContent = '정답! (' + q.korean + ')';
+      } else {
+        ui.feedback.classList.add('wrong');
+        ui.feedback.textContent = '오답 — 정답: ' + q.korean + ' / 입력: ' + answer;
+      }
+
+      ui.btnSubmit.disabled = true;
+
+      setTimeout(function () {
+        appState.currentIndex++;
+        showQuestion();
+      }, 1500);
+    }
+
+    function finishTest() {
+      var wrongThisTest = appState.results.filter(function (r) { return !r.isCorrect; });
+      var existingChars = new Set(appState.wrongPool.map(function (w) { return w.char; }));
+      wrongThisTest.forEach(function (r) {
+        if (!existingChars.has(r.char)) {
+          var item = findByChar(r.char) || { char: r.char, korean: r.correctAnswer };
+          appState.wrongPool.push(item);
+          existingChars.add(r.char);
+        }
+      });
+
+      markSeenAfterTest(appState.questions);
+      appState.lastResults = appState.results.slice();
+      appState.testSessionCount++;
+      saveProgress();
+      renderResultScreen();
+      showScreen('result');
+    }
+
+    function renderResultScreen() {
+      var results = appState.results;
+      var correct = results.filter(function (r) { return r.isCorrect; }).length;
+
+      ui.resultTotal.textContent = results.length;
+      ui.resultCorrect.textContent = correct;
+      ui.resultWrong.textContent = results.length - correct;
+
+      var wrongItems = results.filter(function (r) { return !r.isCorrect; });
+      ui.wrongChips.innerHTML = '';
+      if (wrongItems.length === 0) {
+        ui.wrongChips.innerHTML = '<span style="color:#6b7280;font-size:0.9rem">오답 없음</span>';
+      } else {
+        wrongItems.forEach(function (r) {
+          var chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.innerHTML = r.char + '<span class="sub">' + r.correctAnswer + '</span>';
+          ui.wrongChips.appendChild(chip);
+        });
+      }
+
+      ui.resultDetails.innerHTML = '';
+      results.forEach(function (r) {
+        var row = document.createElement('div');
+        row.className = 'result-row';
+        row.innerHTML =
+          '<span>' + r.number + '. ' + r.char + ' → ' + r.correctAnswer + '</span>' +
+          '<span style="color:' + (r.isCorrect ? 'var(--success)' : 'var(--error)') + '">' +
+          (r.isCorrect ? 'O' : 'X') + ' ' + r.userInput + '</span>';
+        ui.resultDetails.appendChild(row);
+      });
+    }
+
+    function updateStartScreen() {
+      ui.startSessionCount.textContent = appState.testSessionCount;
+      ui.startWrongCount.textContent = appState.wrongPool.length;
+      updateAccessNote();
+    }
+
+    function registerServiceWorker() {
+      if (!('serviceWorker' in navigator)) return;
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('./sw.js').catch(function () { /* file:// 등 */ });
+      });
+    }
+
+    function initApp() {
+      loadProgress();
+      updateStartScreen();
+      registerServiceWorker();
+
+      ui.btnStartTest.addEventListener('click', startTest);
+      ui.btnRestart.addEventListener('click', startTest);
+      ui.btnBackHome.addEventListener('click', function () {
+        updateStartScreen();
+        showScreen('start');
+      });
+      ui.btnResetData.addEventListener('click', function () {
+        if (confirm('테스트 회차, 출제 기록, 오답 데이터를 모두 초기화할까요?')) {
+          resetProgress();
+        }
+      });
+      ui.btnSubmit.addEventListener('click', submitAnswer);
+      ui.answerInput.addEventListener('input', function () {
+        ui.btnSubmit.disabled = !ui.answerInput.value.trim();
+      });
+      ui.answerInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !ui.btnSubmit.disabled) submitAnswer();
+      });
+
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        installPrompt = e;
+        ui.btnInstall.style.display = 'block';
+      });
+
+      ui.btnInstall.addEventListener('click', function () {
+        if (!installPrompt) return;
+        installPrompt.prompt();
+        installPrompt.userChoice.then(function () {
+          installPrompt = null;
+          ui.btnInstall.style.display = 'none';
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initApp);
+
+    /*
+     * 추가 개선 아이디어
+     * 1. 오답별 틀린 횟수 가중치 출제
+     * 2. 정답/오답 효과음
+     * 3. 다크 모드
+     * 4. 카타카나·탁음 확장
+     * 5. 학습 통계 그래프
+     */
+  </script>
+</body>
+</html>
