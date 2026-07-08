@@ -94,8 +94,8 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
+      gap: 6px;
+      padding: 8px 16px;
       min-height: 0;
     }
 
@@ -112,14 +112,43 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
+    }
+
+    .answer-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      align-items: stretch;
+    }
+
+    .answer-row input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      font-size: 1.15rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      outline: none;
+      text-align: center;
+      min-height: 46px;
+    }
+
+    .answer-row input:focus { border-color: var(--primary); }
+
+    .answer-row .btn-submit {
+      flex: 0 0 auto;
+      min-width: 76px;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      white-space: nowrap;
     }
 
     body.kb-open .test-layout {
       justify-content: flex-start;
-      padding-top: max(6px, env(safe-area-inset-top));
-      padding-bottom: 4px;
-      gap: 8px;
+      padding-top: max(4px, env(safe-area-inset-top));
+      padding-bottom: 2px;
+      gap: 4px;
     }
 
     body.kb-open .hiragana-display {
@@ -127,9 +156,10 @@
       margin: 0;
     }
 
-    body.kb-open .status-msg { font-size: 0.8rem; min-height: auto; }
-    body.kb-open .progress { font-size: 0.9rem; }
-    body.kb-open .feedback { font-size: 0.95rem; padding: 8px 14px; }
+    body.kb-open .progress { font-size: 0.85rem; }
+    body.kb-open .feedback { font-size: 0.9rem; padding: 6px 12px; }
+    body.kb-open .answer-row input,
+    body.kb-open .answer-row .btn-submit { min-height: 42px; padding: 10px 12px; }
     #screen-test.active {
       flex: 1;
       min-height: 0;
@@ -143,40 +173,23 @@
     .stat-box .label { font-size: 0.75rem; color: var(--muted); }
     .stat-box .value { font-size: 1.25rem; font-weight: 700; }
 
-    .progress { font-size: 1rem; color: var(--muted); font-weight: 600; }
+    .progress { font-size: 0.9rem; color: var(--muted); font-weight: 600; line-height: 1.2; }
 
     .hiragana-display {
       font-size: clamp(4rem, 20vw, 7rem);
       line-height: 1;
-      margin: 4px 0;
+      margin: 2px 0;
       user-select: none;
     }
 
-    .status-msg { font-size: 0.9rem; color: var(--muted); text-align: center; min-height: 1.4em; }
-
-    .input-wrap { width: 100%; max-width: 360px; }
-    .input-wrap label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
-    .input-wrap input {
-      width: 100%;
-      padding: 14px 16px;
-      font-size: 1.25rem;
-      border: 2px solid #e5e7eb;
-      border-radius: 12px;
-      outline: none;
-      text-align: center;
-      min-height: 48px;
-    }
-    .input-wrap input:focus { border-color: var(--primary); }
-
     .feedback {
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 700;
-      padding: 10px 20px;
-      border-radius: 12px;
+      padding: 8px 14px;
+      border-radius: 10px;
       text-align: center;
       display: none;
       width: 100%;
-      max-width: 360px;
     }
     .feedback.show { display: block; }
     .feedback.correct { background: var(--success-bg); color: var(--success); }
@@ -240,9 +253,10 @@
     @media (max-width: 600px) {
       header h1 { font-size: 1.2rem; }
       .app { padding-bottom: 4px; }
-      .test-layout { padding: 8px 12px; gap: 8px; }
+      .test-layout { padding: 6px 12px; gap: 4px; }
       .hiragana-display { font-size: clamp(3.5rem, 22vw, 5.5rem); }
-      button { min-width: 100%; flex: 1 1 100%; }
+      .answer-row .btn-submit { min-width: 68px; font-size: 0.9rem; }
+      button:not(.btn-submit) { min-width: 100%; flex: 1 1 100%; }
       .result-summary { grid-template-columns: 1fr; }
     }
   </style>
@@ -285,17 +299,13 @@
         <div class="test-question">
           <div class="progress" id="question-progress">1 / 10</div>
           <div class="hiragana-display" id="hiragana-char">あ</div>
-          <p class="status-msg" id="status-msg">한글 발음을 입력하세요</p>
         </div>
         <div class="test-answer">
-          <div class="input-wrap">
-            <label for="answer-input">한글 발음</label>
-            <input type="text" id="answer-input" placeholder="예: 아, 카, 시" autocomplete="off" enterkeyhint="done">
+          <div class="answer-row">
+            <input type="text" id="answer-input" placeholder="한글 발음" autocomplete="off" enterkeyhint="done">
+            <button class="btn-success btn-submit" id="btn-submit" disabled>제출</button>
           </div>
           <div class="feedback" id="feedback"></div>
-          <div class="btn-row">
-            <button class="btn-success btn-full" id="btn-submit" disabled>확인 / 제출</button>
-          </div>
         </div>
       </div>
     </section>
@@ -376,7 +386,6 @@
       testLayout: document.getElementById('test-layout'),
       questionProgress: document.getElementById('question-progress'),
       hiraganaChar: document.getElementById('hiragana-char'),
-      statusMsg: document.getElementById('status-msg'),
       answerInput: document.getElementById('answer-input'),
       feedback: document.getElementById('feedback'),
       btnStartTest: document.getElementById('btn-start-test'),
@@ -570,7 +579,6 @@
       ui.feedback.textContent = '';
       ui.questionProgress.textContent = (appState.currentIndex + 1) + ' / ' + QUESTIONS_PER_TEST;
       ui.hiraganaChar.textContent = q.char;
-      ui.statusMsg.textContent = '한글 발음을 입력하세요';
 
       setTimeout(function () {
         try {
