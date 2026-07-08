@@ -685,7 +685,9 @@
     function registerServiceWorker() {
       if (!('serviceWorker' in navigator)) return;
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js').catch(function () { /* file:// 등 */ });
+        navigator.serviceWorker.register('./sw.js').then(function (reg) {
+          reg.update();
+        }).catch(function () { /* file:// 등 */ });
       });
     }
 
