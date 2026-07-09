@@ -82,7 +82,13 @@
       border: 2px solid #e5e7eb; border-radius: 12px; outline: none; text-align: center; min-height: 46px;
     }
     .answer-row input:focus { border-color: var(--primary); }
-    .answer-row .btn-submit { flex: 0 0 auto; min-width: 76px; padding: 12px 14px; font-size: 0.95rem; }
+    .answer-row .btn-submit,
+    .answer-row .btn-pass { flex: 0 0 auto; min-width: 58px; padding: 12px 10px; font-size: 0.9rem; }
+
+    .feedback.invalid { background: #fef3c7; color: #b45309; }
+
+    .test-footer { flex-shrink: 0; width: 100%; padding: 0 16px max(8px, env(safe-area-inset-bottom)); }
+    .test-footer button { width: 100%; }
 
     .feedback { font-size: 0.95rem; font-weight: 700; padding: 8px 14px; border-radius: 10px; display: none; width: 100%; text-align: center; }
     .feedback.show { display: block; }
@@ -128,7 +134,8 @@
 
     @media (max-width: 600px) {
       .char-display { font-size: clamp(3.5rem, 22vw, 5.5rem); }
-      .answer-row .btn-submit { min-width: 68px; font-size: 0.9rem; }
+      .answer-row .btn-submit,
+      .answer-row .btn-pass { min-width: 52px; font-size: 0.85rem; }
       .result-summary { grid-template-columns: 1fr; }
     }
   </style>
@@ -181,16 +188,20 @@
           <div class="char-display" id="char-display">あ</div>
         </div>
         <div class="timer-wrap">
-          <div class="timer-label"><span>남은 시간</span><span id="timer-text">5.0초</span></div>
+          <div class="timer-label"><span>남은 시간</span><span id="timer-text">10.0초</span></div>
           <div class="timer-bar-bg"><div class="timer-bar" id="timer-bar"></div></div>
         </div>
         <div class="test-answer">
           <div class="answer-row">
             <input type="text" id="answer-input" placeholder="한글 발음" autocomplete="off" enterkeyhint="done">
             <button class="btn-success btn-submit" id="btn-submit" disabled>제출</button>
+            <button class="btn-secondary btn-pass" id="btn-pass">통과</button>
           </div>
           <div class="feedback" id="feedback"></div>
         </div>
+      </div>
+      <div class="test-footer">
+        <button class="btn-secondary" id="btn-test-home">처음화면</button>
       </div>
     </section>
 
@@ -317,6 +328,7 @@
       answerInput: document.getElementById('answer-input'),
       feedback: document.getElementById('feedback'),
       btnSubmit: document.getElementById('btn-submit'),
+      btnPass: document.getElementById('btn-pass'),
       resultTitle: document.getElementById('result-title'),
       resultTotal: document.getElementById('result-total'),
       resultCorrect: document.getElementById('result-correct'),
@@ -330,6 +342,30 @@
     function normalizeKorean(text) {
       if (!text) return '';
       return String(text).replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
+    }
+
+    function getKoreanCharType(ch) {
+      var code = ch.charCodeAt(0);
+      if (code >= 0xAC00 && code <= 0xD7A3) return 'syllable';
+      if ((code >= 0x3131 && code <= 0x314E) || (code >= 0x1100 && code <= 0x115F) || (code >= 0x11A8 && code <= 0x11FF)) {
+        return 'consonant';
+      }
+      if ((code >= 0x314F && code <= 0x3163) || (code >= 0x1160 && code <= 0x11A7)) return 'vowel';
+      return 'other';
+    }
+
+    function isOnlyJamoInput(text) {
+      var normalized = normalizeKorean(text);
+      if (!normalized) return false;
+      var hasConsonant = false;
+      var hasVowel = false;
+      for (var i = 0; i < normalized.length; i++) {
+        var type = getKoreanCharType(normalized[i]);
+        if (type === 'syllable') return false;
+        if (type === 'consonant') hasConsonant = true;
+        if (type === 'vowel') hasVowel = true;
+      }
+      return (hasConsonant && !hasVowel) || (hasVowel && !hasConsonant);
     }
 
     function shuffleArray(arr) {
@@ -472,6 +508,13 @@
       }, 50);
     }
 
+    function exitTestToHome() {
+      stopTimer();
+      appState.submitted = false;
+      updateStartScreen();
+      showScreen('start');
+    }
+
     function startTest(mode) {
       appState.currentMode = mode;
       var questions = getQuestionSet(mode);
@@ -503,7 +546,8 @@
       appState.submitted = false;
       ui.answerInput.value = '';
       ui.btnSubmit.disabled = true;
-      ui.feedback.classList.remove('show', 'correct', 'wrong');
+      ui.btnPass.disabled = false;
+      ui.feedback.classList.remove('show', 'correct', 'wrong', 'invalid');
       ui.feedback.textContent = '';
       ui.questionProgress.textContent = (appState.currentIndex + 1) + ' / ' + appState.questions.length;
       ui.charDisplay.textContent = q.char;
@@ -515,24 +559,42 @@
       }, 80);
     }
 
-    function submitAnswer(isTimeout) {
+    function submitAnswer(isTimeout, isPass) {
       if (appState.submitted) return;
+
+      var q = appState.questions[appState.currentIndex];
+      var answer = '';
+
+      if (!isTimeout && !isPass) {
+        answer = normalizeKorean(ui.answerInput.value);
+        if (!answer) return;
+
+        if (isOnlyJamoInput(answer)) {
+          ui.feedback.classList.remove('correct', 'wrong');
+          ui.feedback.classList.add('show', 'invalid');
+          ui.feedback.textContent = '자음 또는 모음만 입력되었습니다';
+          return;
+        }
+
+        if (ui.answerInput.value !== answer) ui.answerInput.value = answer;
+      }
+
       appState.submitted = true;
       stopTimer();
 
-      var q = appState.questions[appState.currentIndex];
-      var answer = isTimeout ? '' : ui.answerInput.value.trim();
-      var isCorrect = !isTimeout && answer && judgeAnswer(q.korean, answer);
+      var isCorrect = !isTimeout && !isPass && answer && judgeAnswer(q.korean, answer);
 
       appState.results.push({
         number: appState.currentIndex + 1,
         char: q.char,
         correctAnswer: q.korean,
-        userInput: isTimeout ? '(시간 초과)' : answer,
+        userInput: isTimeout ? '(시간 초과)' : (isPass ? '(통과)' : answer),
         isCorrect: isCorrect,
-        timedOut: !!isTimeout
+        timedOut: !!isTimeout,
+        passed: !!isPass
       });
 
+      ui.feedback.classList.remove('invalid');
       ui.feedback.classList.add('show');
       if (isCorrect) {
         ui.feedback.classList.add('correct');
@@ -541,9 +603,12 @@
         ui.feedback.classList.add('wrong');
         ui.feedback.textContent = isTimeout
           ? '시간 초과 — 정답: ' + q.korean
-          : '오답 — 정답: ' + q.korean + (answer ? ' / 입력: ' + answer : '');
+          : isPass
+            ? '통과 — 정답: ' + q.korean
+            : '오답 — 정답: ' + q.korean + (answer ? ' / 입력: ' + answer : '');
       }
       ui.btnSubmit.disabled = true;
+      ui.btnPass.disabled = true;
 
       setTimeout(function () {
         appState.currentIndex++;
@@ -638,12 +703,15 @@
       document.getElementById('btn-reset-data').addEventListener('click', function () {
         if (confirm('히라가나·가타카나·전부 테스트 데이터를 모두 초기화할까요?')) resetProgress();
       });
-      ui.btnSubmit.addEventListener('click', function () { submitAnswer(false); });
+      document.getElementById('btn-test-home').addEventListener('click', exitTestToHome);
+      ui.btnSubmit.addEventListener('click', function () { submitAnswer(false, false); });
+      ui.btnPass.addEventListener('click', function () { submitAnswer(false, true); });
       ui.answerInput.addEventListener('input', function () {
-        ui.btnSubmit.disabled = !ui.answerInput.value.trim();
+        ui.btnSubmit.disabled = !normalizeKorean(ui.answerInput.value);
+        ui.feedback.classList.remove('show', 'correct', 'wrong', 'invalid');
       });
       ui.answerInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && !ui.btnSubmit.disabled) submitAnswer(false);
+        if (e.key === 'Enter' && !ui.btnSubmit.disabled) submitAnswer(false, false);
       });
       window.addEventListener('beforeinstallprompt', function (e) {
         e.preventDefault(); installPrompt = e; ui.btnInstall.style.display = 'block';
