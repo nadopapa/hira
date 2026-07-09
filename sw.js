@@ -1,4 +1,4 @@
-const CACHE = 'hiragana-v3';
+const CACHE = 'hiragana-v4';
 
 const STATIC_ASSETS = ['./manifest.webmanifest', './icon.svg'];
 
