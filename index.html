@@ -120,8 +120,6 @@
     .wrong-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .chip { background: var(--error-bg); color: var(--error); padding: 5px 10px; border-radius: 999px; font-size: 0.9rem; }
     .chip .sub { font-size: 0.75rem; opacity: 0.85; margin-left: 4px; }
-    .result-details { width: 100%; max-height: 180px; overflow-y: auto; font-size: 0.8rem; }
-    .result-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e5e7eb; }
 
     body.kb-open .test-layout { justify-content: flex-start; padding-top: 4px; gap: 4px; }
     body.kb-open .char-display { font-size: clamp(2.75rem, 16vw, 4rem) !important; }
@@ -147,7 +145,7 @@
       <div class="card">
         <p class="start-desc">
           히라가나·가타카나 46자씩 발음 테스트<br>
-          한글 발음 입력 · 문제당 <strong>5초</strong> 제한
+          한글 발음 입력 · 문제당 <strong>10초</strong> 제한
         </p>
         <div class="stats-grid">
           <div class="stats-block">
@@ -206,10 +204,9 @@
           <div class="stat-box"><div class="label">오답</div><div class="value wrong" id="result-wrong">0</div></div>
         </div>
         <div class="wrong-list"><h3>이번 테스트 오답</h3><div class="wrong-chips" id="wrong-chips"></div></div>
-        <div class="result-details" id="result-details"></div>
         <div class="btn-row">
           <button class="btn-primary" id="btn-restart">다음 테스트</button>
-          <button class="btn-secondary" id="btn-back-home">타이틀로</button>
+          <button class="btn-secondary" id="btn-back-home">처음화면</button>
         </div>
       </div>
     </section>
@@ -221,7 +218,7 @@
         <div class="complete-title" id="complete-title">테스트 완료!</div>
         <p class="complete-desc" id="complete-desc"></p>
         <div class="btn-row">
-          <button class="btn-primary" id="btn-complete-home">타이틀로</button>
+          <button class="btn-primary" id="btn-complete-home">처음화면</button>
         </div>
       </div>
     </section>
@@ -229,7 +226,7 @@
 
   <script>
     const QUESTIONS_PER_TEST = 10;
-    const ANSWER_TIMEOUT_MS = 5000;
+    const ANSWER_TIMEOUT_MS = 10000;
     const STORAGE_KEY = 'kanaMemoryTest';
 
     const HIRAGANA_DATA = [
@@ -325,7 +322,6 @@
       resultCorrect: document.getElementById('result-correct'),
       resultWrong: document.getElementById('result-wrong'),
       wrongChips: document.getElementById('wrong-chips'),
-      resultDetails: document.getElementById('result-details'),
       completeTitle: document.getElementById('complete-title'),
       completeDesc: document.getElementById('complete-desc'),
       btnInstall: document.getElementById('btn-install')
@@ -568,17 +564,24 @@
         }
       });
 
+      var finishedSession = state.sessionCount;
       markSeenAfterTest(mode, appState.questions);
       state.sessionCount++;
       saveProgress();
-      renderResultScreen();
+
+      if (state.wrongPool.length === 0) {
+        showCompletionScreen(mode);
+        return;
+      }
+
+      renderResultScreen(finishedSession);
       showScreen('result');
     }
 
-    function renderResultScreen() {
+    function renderResultScreen(finishedSession) {
       var results = appState.results;
       var correct = results.filter(function (r) { return r.isCorrect; }).length;
-      ui.resultTitle.textContent = MODE_LABELS[appState.currentMode] + ' 결과';
+      ui.resultTitle.textContent = finishedSession + '회차 테스트 결과';
       ui.resultTotal.textContent = results.length;
       ui.resultCorrect.textContent = correct;
       ui.resultWrong.textContent = results.length - correct;
@@ -592,16 +595,6 @@
         chip.className = 'chip';
         chip.innerHTML = r.char + '<span class="sub">' + r.correctAnswer + '</span>';
         ui.wrongChips.appendChild(chip);
-      });
-
-      ui.resultDetails.innerHTML = '';
-      results.forEach(function (r) {
-        var row = document.createElement('div');
-        row.className = 'result-row';
-        row.innerHTML = '<span>' + r.number + '. ' + r.char + ' → ' + r.correctAnswer + '</span>' +
-          '<span style="color:' + (r.isCorrect ? 'var(--success)' : 'var(--error)') + '">' +
-          (r.isCorrect ? 'O' : 'X') + ' ' + r.userInput + '</span>';
-        ui.resultDetails.appendChild(row);
       });
     }
 
